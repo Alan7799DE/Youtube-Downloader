@@ -1,12 +1,14 @@
+import time
+from unittest.mock import patch
+
+from app.main import store
+from app.models import VideoInfo
+
+
 def test_health_returns_ok(client):
     resp = client.get("/api/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
-
-
-from unittest.mock import patch
-
-from app.models import VideoInfo
 
 
 def test_info_endpoint_returns_metadata(client):
@@ -28,10 +30,6 @@ def test_info_endpoint_handles_errors(client):
     assert "unavailable" in resp.json()["detail"].lower()
 
 
-import time
-from pathlib import Path
-
-
 def test_download_endpoint_returns_job_id_and_completes(client, tmp_path):
     produced = tmp_path / "out.mp4"
 
@@ -50,7 +48,6 @@ def test_download_endpoint_returns_job_id_and_completes(client, tmp_path):
         assert job_id
 
         # Worker runs in a background thread; poll the job store briefly.
-        from app.main import store
         for _ in range(50):
             job = store.get(job_id)
             if job and job.status in ("done", "error"):
@@ -68,7 +65,6 @@ def test_download_endpoint_records_error(client):
             "url": "https://youtu.be/abc", "kind": "audio", "bitrate": 192,
         })
         job_id = resp.json()["job_id"]
-        from app.main import store
         for _ in range(50):
             job = store.get(job_id)
             if job and job.status in ("done", "error"):
@@ -79,7 +75,14 @@ def test_download_endpoint_records_error(client):
         assert "nope" in job.error
 
 
-from app.main import store
+def test_progress_hook_falls_back_to_total_bytes_estimate():
+    from app.main import _make_progress_hook
+
+    job_id = store.create()
+    hook = _make_progress_hook(job_id)
+    # No total_bytes; only the estimate is available (common early in a download).
+    hook({"status": "downloading", "downloaded_bytes": 5, "total_bytes_estimate": 10})
+    assert store.get(job_id).progress == 50.0
 
 
 def test_progress_stream_emits_status(client):

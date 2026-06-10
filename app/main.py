@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
@@ -13,25 +14,30 @@ from app.downloader import cleanup_expired, extract_info, run_download
 from app.jobs import JobStore
 from app.models import DownloadRequest, InfoRequest, JobCreated, VideoInfo
 
-app = FastAPI(title="YouTube Downloader")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 store = JobStore()
 _semaphore = threading.Semaphore(settings.MAX_CONCURRENT_DOWNLOADS)
+
+
+def _cleanup_loop() -> None:
+    while True:
+        cleanup_expired(settings.DOWNLOAD_DIR, settings.FILE_TTL_SECONDS)
+        store.purge_expired(settings.FILE_TTL_SECONDS)
+        time.sleep(600)  # every 10 minutes
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    threading.Thread(target=_cleanup_loop, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="YouTube Downloader", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
 def index():
     return FileResponse("static/index.html")
-
-
-@app.on_event("startup")
-def start_cleanup_loop():
-    def loop():
-        while True:
-            cleanup_expired(settings.DOWNLOAD_DIR, settings.FILE_TTL_SECONDS)
-            time.sleep(600)  # every 10 minutes
-
-    threading.Thread(target=loop, daemon=True).start()
 
 
 @app.get("/api/health")

@@ -54,10 +54,9 @@ class JobStore:
                 job.status = "error"
                 job.error = message
 
-    def all_jobs(self) -> list[JobState]:
+    def purge_expired(self, ttl_seconds: int) -> None:
+        cutoff = time.time() - ttl_seconds
         with self._lock:
-            return list(self._jobs.values())
-
-    def remove(self, job_id: str) -> None:
-        with self._lock:
-            self._jobs.pop(job_id, None)
+            expired = [jid for jid, job in self._jobs.items() if job.created_at < cutoff]
+            for jid in expired:
+                del self._jobs[jid]

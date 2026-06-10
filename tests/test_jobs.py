@@ -40,3 +40,14 @@ def test_set_error():
 def test_get_missing_returns_none():
     store = JobStore()
     assert store.get("nope") is None
+
+
+def test_purge_expired_removes_old_jobs():
+    store = JobStore()
+    old = store.create()
+    fresh = store.create()
+    # Backdate the old job's creation time past the TTL.
+    store.get(old).created_at -= 7200
+    store.purge_expired(ttl_seconds=3600)
+    assert store.get(old) is None
+    assert store.get(fresh) is not None

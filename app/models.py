@@ -28,10 +28,3 @@ class VideoInfo(BaseModel):
 
 class JobCreated(BaseModel):
     job_id: str
-
-
-class JobStatusResponse(BaseModel):
-    status: str
-    progress: float
-    filename: Optional[str] = None
-    error: Optional[str] = None
