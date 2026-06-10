@@ -1,0 +1,10 @@
+services:
+  youtube-downloader:
+    build: .
+    image: youtube-downloader
+    ports:
+      - "8000:8000"
+    environment:
+      - MAX_CONCURRENT_DOWNLOADS=3
+      - FILE_TTL_SECONDS=3600
+    restart: unless-stopped
