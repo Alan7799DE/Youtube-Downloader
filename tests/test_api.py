@@ -102,3 +102,21 @@ def test_progress_stream_emits_status(client):
 def test_progress_stream_missing_job_404(client):
     resp = client.get("/api/progress/doesnotexist")
     assert resp.status_code == 404
+
+
+def test_file_endpoint_serves_completed_file(client, tmp_path):
+    f = tmp_path / "video.mp4"
+    f.write_text("the-bytes")
+    job_id = store.create()
+    store.set_done(job_id, filepath=str(f), filename="video.mp4")
+
+    resp = client.get(f"/api/file/{job_id}")
+    assert resp.status_code == 200
+    assert resp.content == b"the-bytes"
+    assert "video.mp4" in resp.headers["content-disposition"]
+
+
+def test_file_endpoint_404_when_not_done(client):
+    job_id = store.create()  # still pending
+    resp = client.get(f"/api/file/{job_id}")
+    assert resp.status_code == 404
