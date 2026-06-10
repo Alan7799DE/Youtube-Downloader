@@ -1,5 +1,7 @@
 import glob
 import os
+import shutil
+import time
 import zipfile
 from pathlib import Path
 from typing import Callable, Optional
@@ -77,6 +79,19 @@ def extract_info(url: str) -> VideoInfo:
         entries_count=None,
         available_heights=heights,
     )
+
+
+def cleanup_expired(base_dir: str, ttl_seconds: int) -> None:
+    if not os.path.isdir(base_dir):
+        return
+    now = time.time()
+    for name in os.listdir(base_dir):
+        path = os.path.join(base_dir, name)
+        if not os.path.isdir(path):
+            continue
+        age = now - os.path.getmtime(path)
+        if age > ttl_seconds:
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def _default_writer(opts: dict, url: str, outdir: str) -> list[Path]:

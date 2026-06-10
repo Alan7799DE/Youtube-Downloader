@@ -1,8 +1,9 @@
+import os
 import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app.downloader import build_format_selector, build_ydl_opts, extract_info, run_download
+from app.downloader import build_format_selector, build_ydl_opts, cleanup_expired, extract_info, run_download
 from app.models import DownloadRequest
 
 
@@ -125,3 +126,24 @@ def test_run_download_multiple_files_zipped(tmp_path):
     assert result.suffix == ".zip"
     with zipfile.ZipFile(result) as z:
         assert sorted(z.namelist()) == ["a.mp3", "b.mp3"]
+
+
+import time as _time
+
+
+def test_cleanup_removes_old_dirs(tmp_path):
+    old = tmp_path / "oldjob"
+    old.mkdir()
+    (old / "f.mp4").write_text("x")
+    # Backdate its modification time by 2 hours.
+    two_hours_ago = _time.time() - 7200
+    os.utime(old, (two_hours_ago, two_hours_ago))
+
+    fresh = tmp_path / "freshjob"
+    fresh.mkdir()
+    (fresh / "f.mp4").write_text("x")
+
+    cleanup_expired(str(tmp_path), ttl_seconds=3600)
+
+    assert not old.exists()
+    assert fresh.exists()
