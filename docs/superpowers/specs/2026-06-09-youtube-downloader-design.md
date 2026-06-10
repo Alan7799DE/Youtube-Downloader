@@ -23,7 +23,12 @@ constantemente).
 - **Stack (Enfoque A):** Python + FastAPI usando `yt-dlp` como librería nativa +
   frontend HTML/CSS/JS liviano servido por el mismo servidor.
 - **Funciones:** video MP4 con resolución seleccionable, audio MP3/M4A con bitrate
-  seleccionable (128/192/256/320 kbps), playlists enteras, subtítulos.
+  seleccionable (128/192/256/320 kbps), playlists enteras (sin límite de tamaño),
+  subtítulos.
+- **Nombre:** "YouTube Downloader". Imagen Docker: `youtube-downloader`.
+- **Idioma de la UI:** inglés.
+- **Videos con restricción de edad/login:** fuera de v1. Si un video requiere login,
+  se muestra un mensaje claro. El soporte de cookies se puede agregar más adelante.
 
 ## Arquitectura general
 
@@ -81,13 +86,16 @@ Navegador (UI simple)  ──HTTP/SSE──>  FastAPI
   Se entregan como archivo `.srt` separado junto al video (no incrustados), dentro
   de un ZIP cuando se piden subtítulos. Esto evita complejidad extra de ffmpeg.
 - **Playlists:** se detectan en `/api/info`; se descargan en secuencia (progreso por
-  ítem) y se entregan como un ZIP.
+  ítem) y se entregan como un ZIP. Sin límite de tamaño; el semáforo de concurrencia
+  evita saturar el server.
 
 ## Manejo de errores
 
 - URL inválida / video no disponible / privado → mensaje claro en la UI (no stack trace).
 - Errores de yt-dlp (geobloqueo, bloqueo de IP) → mensaje amigable.
 - Job inexistente o expirado → 404.
+- Video que requiere login/restricción de edad → mensaje claro ("requiere inicio de
+  sesión, no soportado en v1").
 
 ## Límites y concurrencia
 
