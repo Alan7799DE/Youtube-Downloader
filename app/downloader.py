@@ -1,5 +1,8 @@
+import glob
 import os
-from typing import Callable
+import zipfile
+from pathlib import Path
+from typing import Callable, Optional
 
 from yt_dlp import YoutubeDL
 
@@ -74,3 +77,40 @@ def extract_info(url: str) -> VideoInfo:
         entries_count=None,
         available_heights=heights,
     )
+
+
+def _default_writer(opts: dict, url: str, outdir: str) -> list[Path]:
+    before = set(glob.glob(os.path.join(outdir, "*")))
+    with YoutubeDL(opts) as ydl:
+        ydl.download([url])
+    after = set(glob.glob(os.path.join(outdir, "*")))
+    new_files = [Path(p) for p in sorted(after - before)]
+    return new_files
+
+
+def run_download(
+    req: DownloadRequest,
+    outdir: str,
+    progress_hook: ProgressHook,
+    _writer: Optional[Callable[[str], list[Path]]] = None,
+) -> Path:
+    os.makedirs(outdir, exist_ok=True)
+
+    if _writer is not None:
+        files = _writer(outdir)
+    else:
+        opts = build_ydl_opts(req, outdir, progress_hook)
+        files = _default_writer(opts, req.url, outdir)
+
+    files = [f for f in files if f.is_file()]
+    if not files:
+        raise RuntimeError("No output file was produced")
+
+    if len(files) == 1:
+        return files[0]
+
+    zip_path = Path(outdir) / "download.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in files:
+            z.write(f, arcname=f.name)
+    return zip_path

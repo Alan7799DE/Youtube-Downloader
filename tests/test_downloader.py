@@ -1,6 +1,8 @@
+import zipfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app.downloader import build_format_selector, build_ydl_opts, extract_info
+from app.downloader import build_format_selector, build_ydl_opts, extract_info, run_download
 from app.models import DownloadRequest
 
 
@@ -90,3 +92,36 @@ def test_extract_info_playlist():
     assert info.is_playlist is True
     assert info.entries_count == 3
     assert info.title == "My Playlist"
+
+
+def test_run_download_single_file_returned(tmp_path):
+    req = DownloadRequest(url="u", kind="video", resolution=720)
+
+    def fake_download(outdir):
+        # Simulate yt-dlp writing one output file.
+        f = Path(outdir) / "Demo Video.mp4"
+        f.write_text("video-bytes")
+        return [f]
+
+    result = run_download(req, str(tmp_path), progress_hook=lambda d: None,
+                          _writer=fake_download)
+    assert result.name == "Demo Video.mp4"
+    assert result.read_text() == "video-bytes"
+
+
+def test_run_download_multiple_files_zipped(tmp_path):
+    req = DownloadRequest(url="u", kind="audio", bitrate=192)
+
+    def fake_download(outdir):
+        files = []
+        for name in ["a.mp3", "b.mp3"]:
+            f = Path(outdir) / name
+            f.write_text(name)
+            files.append(f)
+        return files
+
+    result = run_download(req, str(tmp_path), progress_hook=lambda d: None,
+                          _writer=fake_download)
+    assert result.suffix == ".zip"
+    with zipfile.ZipFile(result) as z:
+        assert sorted(z.namelist()) == ["a.mp3", "b.mp3"]
