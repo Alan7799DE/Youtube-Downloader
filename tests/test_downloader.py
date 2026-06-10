@@ -1,4 +1,6 @@
-from app.downloader import build_format_selector, build_ydl_opts
+from unittest.mock import MagicMock, patch
+
+from app.downloader import build_format_selector, build_ydl_opts, extract_info
 from app.models import DownloadRequest
 
 
@@ -49,3 +51,42 @@ def test_ydl_opts_outdir_in_template():
     req = DownloadRequest(url="u", kind="video")
     opts = build_ydl_opts(req, outdir="/tmp/out", progress_hook=lambda d: None)
     assert opts["outtmpl"].startswith("/tmp/out/")
+
+
+SINGLE_VIDEO_INFO = {
+    "title": "Demo Video",
+    "thumbnail": "http://img/thumb.jpg",
+    "duration": 213,
+    "formats": [
+        {"height": 1080}, {"height": 720}, {"height": 720}, {"height": None},
+    ],
+}
+
+PLAYLIST_INFO = {
+    "title": "My Playlist",
+    "_type": "playlist",
+    "entries": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+}
+
+
+def test_extract_info_single_video():
+    fake_ydl = MagicMock()
+    fake_ydl.extract_info.return_value = SINGLE_VIDEO_INFO
+    with patch("app.downloader.YoutubeDL") as YDL:
+        YDL.return_value.__enter__.return_value = fake_ydl
+        info = extract_info("https://youtu.be/abc")
+    assert info.title == "Demo Video"
+    assert info.is_playlist is False
+    assert info.duration == 213
+    assert info.available_heights == [1080, 720]  # deduped, descending
+
+
+def test_extract_info_playlist():
+    fake_ydl = MagicMock()
+    fake_ydl.extract_info.return_value = PLAYLIST_INFO
+    with patch("app.downloader.YoutubeDL") as YDL:
+        YDL.return_value.__enter__.return_value = fake_ydl
+        info = extract_info("https://youtu.be/list")
+    assert info.is_playlist is True
+    assert info.entries_count == 3
+    assert info.title == "My Playlist"
