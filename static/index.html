@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YouTube Downloader</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>YouTube Downloader</h1>
+    <form id="url-form">
+      <input id="url" type="url" placeholder="Paste a YouTube URL" required />
+      <button type="submit">Fetch</button>
+    </form>
+
+    <section id="info" class="hidden">
+      <img id="thumb" alt="thumbnail" />
+      <h2 id="title"></h2>
+      <p id="meta"></p>
+
+      <div class="options">
+        <label><input type="radio" name="kind" value="video" checked /> Video (MP4)</label>
+        <label><input type="radio" name="kind" value="audio" /> Audio</label>
+
+        <div id="video-opts">
+          <label>Resolution
+            <select id="resolution"></select>
+          </label>
+        </div>
+
+        <div id="audio-opts" class="hidden">
+          <label>Format
+            <select id="audio_format">
+              <option value="mp3">MP3</option>
+              <option value="m4a">M4A</option>
+            </select>
+          </label>
+          <label>Bitrate
+            <select id="bitrate">
+              <option value="128">128 kbps</option>
+              <option value="192" selected>192 kbps</option>
+              <option value="256">256 kbps</option>
+              <option value="320">320 kbps</option>
+            </select>
+          </label>
+        </div>
+
+        <label><input id="subtitles" type="checkbox" /> Include subtitles</label>
+        <label id="sub-lang-wrap" class="hidden">Subtitle language
+          <input id="sub_lang" type="text" value="en" size="4" />
+        </label>
+      </div>
+
+      <button id="download-btn">Download</button>
+    </section>
+
+    <section id="progress-section" class="hidden">
+      <div class="bar"><div id="bar-fill"></div></div>
+      <p id="status-text"></p>
+    </section>
+
+    <p id="error" class="error hidden"></p>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

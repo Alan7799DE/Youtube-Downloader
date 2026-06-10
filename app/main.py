@@ -6,6 +6,7 @@ import time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.downloader import cleanup_expired, extract_info, run_download
@@ -13,8 +14,14 @@ from app.jobs import JobStore
 from app.models import DownloadRequest, InfoRequest, JobCreated, VideoInfo
 
 app = FastAPI(title="YouTube Downloader")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 store = JobStore()
 _semaphore = threading.Semaphore(settings.MAX_CONCURRENT_DOWNLOADS)
+
+
+@app.get("/")
+def index():
+    return FileResponse("static/index.html")
 
 
 @app.on_event("startup")

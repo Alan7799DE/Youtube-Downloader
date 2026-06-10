@@ -120,3 +120,10 @@ def test_file_endpoint_404_when_not_done(client):
     job_id = store.create()  # still pending
     resp = client.get(f"/api/file/{job_id}")
     assert resp.status_code == 404
+
+
+def test_root_serves_html(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "YouTube Downloader" in resp.text
