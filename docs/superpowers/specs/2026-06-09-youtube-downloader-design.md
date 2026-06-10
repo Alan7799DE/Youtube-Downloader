@@ -22,8 +22,8 @@ constantemente).
 - **Despliegue:** Docker, un solo comando. Todo empaquetado (web + yt-dlp + ffmpeg).
 - **Stack (Enfoque A):** Python + FastAPI usando `yt-dlp` como librería nativa +
   frontend HTML/CSS/JS liviano servido por el mismo servidor.
-- **Funciones:** video MP4 con calidad seleccionable, audio MP3/M4A, playlists,
-  subtítulos.
+- **Funciones:** video MP4 con resolución seleccionable, audio MP3/M4A con bitrate
+  seleccionable (128/192/256/320 kbps), playlists enteras, subtítulos.
 
 ## Arquitectura general
 
@@ -43,7 +43,8 @@ Navegador (UI simple)  ──HTTP/SSE──>  FastAPI
 1. Usuario pega la URL → la UI pide metadata (`POST /api/info`).
 2. Backend usa yt-dlp para devolver: título, miniatura, duración, si es playlist,
    y calidades disponibles.
-3. La UI muestra esa info + opciones: video o audio, calidad, subtítulos sí/no.
+3. La UI muestra esa info + opciones: video (con resolución) o audio (con bitrate),
+   subtítulos sí/no.
 4. Usuario da "Descargar" → `POST /api/download` crea un job y devuelve `job_id`.
 5. La UI abre un stream SSE (`GET /api/progress/{job_id}`) y muestra una barra de
    progreso en tiempo real (yt-dlp expone el % vía progress hook).
@@ -66,7 +67,7 @@ Navegador (UI simple)  ──HTTP/SSE──>  FastAPI
 |---|---|---|
 | `GET`  | `/` | Sirve la UI |
 | `POST` | `/api/info` | `{url}` → metadata + formatos disponibles |
-| `POST` | `/api/download` | `{url, tipo, calidad, subtítulos, idioma_sub}` → `{job_id}` |
+| `POST` | `/api/download` | `{url, tipo, resolucion, bitrate, subtítulos, idioma_sub}` → `{job_id}` |
 | `GET`  | `/api/progress/{job_id}` | Stream SSE con el progreso |
 | `GET`  | `/api/file/{job_id}` | Entrega el archivo final |
 
@@ -74,7 +75,8 @@ Navegador (UI simple)  ──HTTP/SSE──>  FastAPI
 
 - **Video:** selector yt-dlp `bestvideo[height<=N]+bestaudio/best`, unido a MP4 con
   ffmpeg. N viene de la calidad elegida (1080, 720, 480, ...).
-- **Audio:** `bestaudio` + postprocesador `FFmpegExtractAudio` para MP3 o M4A.
+- **Audio:** `bestaudio` + postprocesador `FFmpegExtractAudio` para MP3 o M4A, con
+  bitrate seleccionable (128/192/256/320 kbps vía `preferredquality`).
 - **Subtítulos:** `writesubtitles` / `writeautomaticsub` con idioma seleccionable.
   Se entregan como archivo `.srt` separado junto al video (no incrustados), dentro
   de un ZIP cuando se piden subtítulos. Esto evita complejidad extra de ffmpeg.
