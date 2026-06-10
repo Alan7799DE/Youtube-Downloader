@@ -26,3 +26,54 @@ def test_info_endpoint_handles_errors(client):
         resp = client.post("/api/info", json={"url": "https://youtu.be/bad"})
     assert resp.status_code == 400
     assert "unavailable" in resp.json()["detail"].lower()
+
+
+import time
+from pathlib import Path
+
+
+def test_download_endpoint_returns_job_id_and_completes(client, tmp_path):
+    produced = tmp_path / "out.mp4"
+
+    def fake_run_download(req, outdir, progress_hook, _writer=None):
+        progress_hook({"status": "downloading", "downloaded_bytes": 5,
+                       "total_bytes": 10})
+        produced.write_text("data")
+        return produced
+
+    with patch("app.main.run_download", side_effect=fake_run_download):
+        resp = client.post("/api/download", json={
+            "url": "https://youtu.be/abc", "kind": "video", "resolution": 720,
+        })
+        assert resp.status_code == 200
+        job_id = resp.json()["job_id"]
+        assert job_id
+
+        # Worker runs in a background thread; poll the job store briefly.
+        from app.main import store
+        for _ in range(50):
+            job = store.get(job_id)
+            if job and job.status in ("done", "error"):
+                break
+            time.sleep(0.02)
+        assert store.get(job_id).status == "done"
+
+
+def test_download_endpoint_records_error(client):
+    def boom(req, outdir, progress_hook, _writer=None):
+        raise RuntimeError("nope")
+
+    with patch("app.main.run_download", side_effect=boom):
+        resp = client.post("/api/download", json={
+            "url": "https://youtu.be/abc", "kind": "audio", "bitrate": 192,
+        })
+        job_id = resp.json()["job_id"]
+        from app.main import store
+        for _ in range(50):
+            job = store.get(job_id)
+            if job and job.status in ("done", "error"):
+                break
+            time.sleep(0.02)
+        job = store.get(job_id)
+        assert job.status == "error"
+        assert "nope" in job.error
