@@ -1,5 +1,7 @@
 # YouTube Downloader
 
+[![Tests](https://github.com/Alan7799DE/youtube-downloader/actions/workflows/tests.yml/badge.svg)](https://github.com/Alan7799DE/youtube-downloader/actions/workflows/tests.yml)
+
 A self-hosted web app to download YouTube videos (MP4), audio (MP3/M4A),
 whole playlists, and subtitles. Built with FastAPI + yt-dlp + ffmpeg.
 
