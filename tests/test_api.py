@@ -77,3 +77,28 @@ def test_download_endpoint_records_error(client):
         job = store.get(job_id)
         assert job.status == "error"
         assert "nope" in job.error
+
+
+from app.main import store
+
+
+def test_progress_stream_emits_status(client):
+    job_id = store.create()
+    store.update_progress(job_id, 50.0)
+    store.set_done(job_id, filepath="/tmp/x.mp4", filename="x.mp4")
+
+    with client.stream("GET", f"/api/progress/{job_id}") as resp:
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/event-stream")
+        body = ""
+        for chunk in resp.iter_text():
+            body += chunk
+            if "done" in body:
+                break
+    assert "done" in body
+    assert "x.mp4" in body
+
+
+def test_progress_stream_missing_job_404(client):
+    resp = client.get("/api/progress/doesnotexist")
+    assert resp.status_code == 404
