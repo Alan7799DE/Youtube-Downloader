@@ -1,3 +1,5 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-yt-dlp==2025.5.22
+# yt-dlp is intentionally unpinned: YouTube changes constantly and only the
+# latest yt-dlp keeps working. Pinning it guarantees breakage over time.
+yt-dlp

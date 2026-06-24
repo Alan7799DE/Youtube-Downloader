@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 import shutil
 import time
 import zipfile
@@ -11,6 +12,13 @@ from yt_dlp import YoutubeDL
 from app.models import DownloadRequest, VideoInfo
 
 ProgressHook = Callable[[dict], None]
+
+
+def is_radio_mix(url: str) -> bool:
+    """A YouTube auto-generated "Mix"/radio (list=RD...) is an endless feed, not a
+    real playlist. Treat it as a single video instead of downloading hundreds of
+    auto-picked tracks."""
+    return bool(re.search(r"[?&]list=RD", url))
 
 
 def build_format_selector(req: DownloadRequest) -> str:
@@ -27,7 +35,7 @@ def build_ydl_opts(req: DownloadRequest, outdir: str, progress_hook: ProgressHoo
         "format": build_format_selector(req),
         "outtmpl": os.path.join(outdir, "%(title)s.%(ext)s"),
         "progress_hooks": [progress_hook],
-        "noplaylist": False,
+        "noplaylist": is_radio_mix(req.url),
         "quiet": True,
         "no_warnings": True,
         "postprocessors": [],
@@ -52,7 +60,15 @@ def build_ydl_opts(req: DownloadRequest, outdir: str, progress_hook: ProgressHoo
 
 
 def extract_info(url: str) -> VideoInfo:
-    opts = {"quiet": True, "no_warnings": True, "skip_download": True}
+    # extract_flat keeps playlist/mix lookups fast: entries are listed without
+    # extracting full metadata for every video (a radio "mix" can be huge).
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "extract_flat": "in_playlist",
+        "noplaylist": is_radio_mix(url),
+    }
     with YoutubeDL(opts) as ydl:
         data = ydl.extract_info(url, download=False)
 

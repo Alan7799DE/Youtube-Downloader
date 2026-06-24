@@ -147,3 +147,28 @@ def test_cleanup_removes_old_dirs(tmp_path):
 
     assert not old.exists()
     assert fresh.exists()
+
+
+from app.downloader import is_radio_mix
+
+
+def test_is_radio_mix_detects_rd_lists():
+    assert is_radio_mix("https://youtu.be/abc?list=RDabc") is True
+    assert is_radio_mix("https://www.youtube.com/watch?v=abc&list=RDMMxyz") is True
+
+
+def test_is_radio_mix_false_for_real_playlists_and_plain_videos():
+    assert is_radio_mix("https://youtu.be/abc?list=PLxyz") is False
+    assert is_radio_mix("https://youtu.be/abc") is False
+
+
+def test_ydl_opts_noplaylist_true_for_radio_mix():
+    req = DownloadRequest(url="https://youtu.be/abc?list=RDabc", kind="video")
+    opts = build_ydl_opts(req, outdir="/tmp/out", progress_hook=lambda d: None)
+    assert opts["noplaylist"] is True
+
+
+def test_ydl_opts_noplaylist_false_for_real_playlist():
+    req = DownloadRequest(url="https://youtu.be/abc?list=PLabc", kind="video")
+    opts = build_ydl_opts(req, outdir="/tmp/out", progress_hook=lambda d: None)
+    assert opts["noplaylist"] is False
