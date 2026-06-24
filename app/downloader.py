@@ -115,8 +115,7 @@ def _default_writer(opts: dict, url: str, outdir: str) -> list[Path]:
     with YoutubeDL(opts) as ydl:
         ydl.download([url])
     after = set(glob.glob(os.path.join(outdir, "*")))
-    new_files = [Path(p) for p in sorted(after - before)]
-    return new_files
+    return [Path(p) for p in sorted(after - before)]
 
 
 def run_download(

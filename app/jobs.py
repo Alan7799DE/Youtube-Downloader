@@ -7,7 +7,6 @@ from typing import Optional
 
 @dataclass
 class JobState:
-    job_id: str
     status: str = "pending"       # pending | downloading | done | error
     progress: float = 0.0
     filename: Optional[str] = None
@@ -24,7 +23,7 @@ class JobStore:
     def create(self) -> str:
         job_id = uuid.uuid4().hex
         with self._lock:
-            self._jobs[job_id] = JobState(job_id=job_id)
+            self._jobs[job_id] = JobState()
         return job_id
 
     def get(self, job_id: str) -> Optional[JobState]:

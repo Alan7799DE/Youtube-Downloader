@@ -1,4 +1,4 @@
-from app.jobs import JobStore, JobState
+from app.jobs import JobStore
 
 
 def test_create_returns_unique_ids():

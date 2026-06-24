@@ -31,7 +31,6 @@ uvicorn app.main:app --port 8000
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PORT` | 8000 | Port (when run via uvicorn directly) |
 | `MAX_CONCURRENT_DOWNLOADS` | 3 | Simultaneous downloads |
 | `FILE_TTL_SECONDS` | 3600 | How long finished files are kept |
 | `DOWNLOAD_DIR` | /tmp/ytdl-downloads | Where temp files live |
